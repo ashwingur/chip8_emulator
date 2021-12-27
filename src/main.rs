@@ -2,7 +2,7 @@ mod processor;
 use processor::*;
 
 fn main() {
-    let rom = "roms/PONG";
+    let rom = "roms/MAZE";
 
     let mut processor = Processor::new();
     processor.load_rom(rom);

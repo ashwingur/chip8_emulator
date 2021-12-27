@@ -5,6 +5,7 @@
 use std::fs;
 extern crate rand;
 use rand::Rng;
+use std::{thread, time};
 
 const RAM: usize = 4096;
 const DISPLAY_WIDTH: usize = 64;
@@ -12,6 +13,7 @@ const DISPLAY_HEIGHT: usize = 32;
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const INSTRUCTION_SIZE: usize = 2;
+const FRAME_DURATION_MILLIS: u64 = 2; // Clock speed of CHIP-8 is usually 500Hz
 
 const FONT: [u8; 5 * 16] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -92,6 +94,7 @@ impl Processor {
     pub fn start(&mut self) {
         loop {
             self.tick();
+            thread::sleep(time::Duration::from_millis(FRAME_DURATION_MILLIS));
         }
     }
 
@@ -351,7 +354,7 @@ impl Processor {
     */
     fn op_7xkk(&mut self, x: usize, kk: u8) {
         debug!("7xkk");
-        self.v[x] += kk;
+        self.v[x] = self.v[x].wrapping_add(kk);
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -538,7 +541,21 @@ impl Processor {
     */
     fn op_dxyn(&mut self, x: usize, y: usize, n: usize) {
         debug!("dxyn");
-        // TODO
+        self.v[0xF] = 0;
+        for row in 0..n {
+            let y_index = (self.v[y] as usize + row) % DISPLAY_HEIGHT;
+            for col in 0..8 {
+                // XOR onto the screen, if a pixel became 0 set VF to 1
+                // Wrapping around the screen if required
+                let x_index = (self.v[x] as usize + col) % DISPLAY_WIDTH;
+                let pixel = (self.ram[self.i_register + row] >> (7 - col)) & 1;
+                self.display[y_index][x_index] ^= pixel;
+                if self.display[y_index][x_index] == 0 {
+                    self.v[0xF] = 1;
+                }
+            }
+        }
+        // self.print_ascii_display();
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -596,7 +613,7 @@ impl Processor {
     */
     fn op_fx15(&mut self, x: usize) {
         debug!("fx15");
-        // TODO
+        self.delay_register = self.v[x];
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -607,7 +624,7 @@ impl Processor {
     */
     fn op_fx18(&mut self, x: usize) {
         debug!("fx18");
-        // TODO
+        self.sound_register = self.v[x];
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -630,7 +647,7 @@ impl Processor {
     */
     fn op_fx29(&mut self, x: usize) {
         debug!("fx29");
-        // TODO
+        self.i_register = (self.v[x] * 5) as usize;
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -687,5 +704,18 @@ impl Processor {
             }
         }
         println!();
+    }
+
+    pub fn print_ascii_display(&self) {
+        for row in self.display {
+            for cell in row {
+                if cell == 1 {
+                    print!("█");
+                } else {
+                    print!(" ");
+                }
+            }
+            println!();
+        }
     }
 }
