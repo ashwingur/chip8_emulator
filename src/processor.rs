@@ -14,8 +14,9 @@ pub const DISPLAY_HEIGHT: usize = 32;
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const INSTRUCTION_SIZE: usize = 2;
-const FRAME_DURATION_MILLIS: u64 = 2; // Clock speed of CHIP-8 is usually 500Hz
+const CLOCK_SPEED: u64 = 2; // Clock speed of CHIP-8 is usually 500Hz
 pub const KEYBOARD_SIZE: usize = 16;
+const FRAME_RATE: u32 = 8;
 
 const FONT: [u8; 5 * 16] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -62,10 +63,11 @@ pub struct Processor {
     sp: usize,
     keyboard_presses: [bool; KEYBOARD_SIZE],
     is_waiting_for_input: bool,
+    title: String,
 }
 
 impl Processor {
-    pub fn new() -> Processor {
+    pub fn new(rom: &str) -> Processor {
         // Load in the default sprites
         let mut ram = [0; RAM];
         for i in 0..FONT.len() {
@@ -84,6 +86,7 @@ impl Processor {
             sp: 0,
             keyboard_presses: [false; KEYBOARD_SIZE],
             is_waiting_for_input: false,
+            title: rom.to_string(),
         }
     }
 
@@ -98,7 +101,8 @@ impl Processor {
     }
 
     pub fn start(&mut self) {
-        let mut game_canvas = GameCanvas::new();
+        let mut game_canvas = GameCanvas::new(&self.title);
+        let mut freq = 0;
         loop {
             if let Some(input) = game_canvas.read_keyboard_inputs() {
                 self.keyboard_presses = input;
@@ -107,16 +111,20 @@ impl Processor {
             }
 
             self.tick();
-            if !self.is_waiting_for_input {
-                if self.delay_register > 0 {
-                    self.delay_register -= 1;
+            if freq == 0 {
+                if !self.is_waiting_for_input {
+                    if self.delay_register > 0 {
+                        self.delay_register -= 1;
+                    }
+                    if self.sound_register > 0 {
+                        self.sound_register -= 1;
+                    }
                 }
-                if self.sound_register > 0 {
-                    self.sound_register -= 1;
-                }
+                game_canvas.draw_frame(&self.display);
+                freq = FRAME_RATE;
             }
-            game_canvas.draw_frame(&self.display);
-            thread::sleep(time::Duration::from_millis(FRAME_DURATION_MILLIS));
+            thread::sleep(time::Duration::from_millis(CLOCK_SPEED));
+            freq -= 1;
         }
     }
 
@@ -576,7 +584,6 @@ impl Processor {
                 }
             }
         }
-        // self.print_ascii_display();
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -742,18 +749,5 @@ impl Processor {
             }
         }
         println!();
-    }
-
-    pub fn print_ascii_display(&self) {
-        for row in self.display {
-            for cell in row {
-                if cell == 1 {
-                    print!("█");
-                } else {
-                    print!(" ");
-                }
-            }
-            println!();
-        }
     }
 }

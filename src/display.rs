@@ -8,24 +8,22 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::EventPump;
-use sdl2::Sdl;
 
 const PIXEL_SCALE: u32 = 12;
 
 pub struct GameCanvas {
     canvas: Canvas<Window>,
-    sdl_context: Sdl,
     event_pump: EventPump,
 }
 
 impl GameCanvas {
-    pub fn new() -> GameCanvas {
+    pub fn new(title: &str) -> GameCanvas {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
         let window = video_subsystem
             .window(
-                "rust-sdl2 demo",
+                title,
                 DISPLAY_WIDTH as u32 * PIXEL_SCALE,
                 DISPLAY_HEIGHT as u32 * PIXEL_SCALE,
             )
@@ -33,11 +31,10 @@ impl GameCanvas {
             .build()
             .unwrap();
 
-        let mut canvas = window.into_canvas().build().unwrap();
-        let mut event_pump = sdl_context.event_pump().unwrap();
+        let canvas = window.into_canvas().build().unwrap();
+        let event_pump = sdl_context.event_pump().unwrap();
         GameCanvas {
             canvas,
-            sdl_context,
             event_pump: event_pump,
         }
     }

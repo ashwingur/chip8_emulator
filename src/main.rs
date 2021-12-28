@@ -10,7 +10,7 @@ fn main() {
         return;
     }
 
-    let mut processor = Processor::new();
+    let mut processor = Processor::new(&args[1]);
     processor.load_rom(&format!("roms/{}", &args[1]));
     processor.start();
 }
