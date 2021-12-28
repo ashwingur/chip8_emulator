@@ -4,16 +4,18 @@
 
 use std::fs;
 extern crate rand;
+use crate::display::GameCanvas;
 use rand::Rng;
 use std::{thread, time};
 
 const RAM: usize = 4096;
-const DISPLAY_WIDTH: usize = 64;
-const DISPLAY_HEIGHT: usize = 32;
+pub const DISPLAY_WIDTH: usize = 64;
+pub const DISPLAY_HEIGHT: usize = 32;
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const INSTRUCTION_SIZE: usize = 2;
-const FRAME_DURATION_MILLIS: u64 = 2; // Clock speed of CHIP-8 is usually 500Hz
+const FRAME_DURATION_MILLIS: u64 = 30; // Clock speed of CHIP-8 is usually 500Hz
+pub const KEYBOARD_SIZE: usize = 16;
 
 const FONT: [u8; 5 * 16] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -58,6 +60,7 @@ pub struct Processor {
     sound_register: u8,
     pc: usize,
     sp: usize,
+    keyboard_presses: [bool; KEYBOARD_SIZE],
 }
 
 impl Processor {
@@ -78,6 +81,7 @@ impl Processor {
             sound_register: 0,
             pc: 512, // Starts at address 0x200
             sp: 0,
+            keyboard_presses: [false; KEYBOARD_SIZE],
         }
     }
 
@@ -92,8 +96,14 @@ impl Processor {
     }
 
     pub fn start(&mut self) {
+        let mut game_canvas = GameCanvas::new();
         loop {
+            if let Some(input) = game_canvas.read_keyboard_inputs() {
+            } else {
+                break;
+            }
             self.tick();
+            game_canvas.draw_frame(&self.display);
             thread::sleep(time::Duration::from_millis(FRAME_DURATION_MILLIS));
         }
     }
@@ -101,7 +111,6 @@ impl Processor {
     pub fn tick(&mut self) {
         // Get the current opcode
         let opcode = self.get_current_opcode();
-        println!("current opcode is {:X?}", opcode);
 
         // Run the opcode
         self.run_opcode(opcode);
@@ -567,8 +576,11 @@ impl Processor {
     */
     fn op_ex9e(&mut self, x: usize) {
         debug!("ex9e");
-        // TODO
-        self.pc += INSTRUCTION_SIZE;
+        self.pc += if self.keyboard_presses[self.v[x] as usize] == true {
+            2 * INSTRUCTION_SIZE
+        } else {
+            INSTRUCTION_SIZE
+        };
     }
 
     /*  ExA1 - SKNP Vx
@@ -579,8 +591,11 @@ impl Processor {
     */
     fn op_exa1(&mut self, x: usize) {
         debug!("exa1");
-        // TODO
-        self.pc += INSTRUCTION_SIZE;
+        self.pc += if self.keyboard_presses[self.v[x] as usize] == false {
+            2 * INSTRUCTION_SIZE
+        } else {
+            INSTRUCTION_SIZE
+        };
     }
 
     /*  Fx07 - LD Vx, DT

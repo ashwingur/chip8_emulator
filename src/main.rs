@@ -1,8 +1,9 @@
 mod processor;
 use processor::*;
+mod display;
 
 fn main() {
-    let rom = "roms/MAZE";
+    let rom = "roms/INVADERS";
 
     let mut processor = Processor::new();
     processor.load_rom(rom);
