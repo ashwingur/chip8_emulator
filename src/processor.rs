@@ -14,7 +14,7 @@ pub const DISPLAY_HEIGHT: usize = 32;
 const REGISTER_COUNT: usize = 16;
 const STACK_SIZE: usize = 16;
 const INSTRUCTION_SIZE: usize = 2;
-const FRAME_DURATION_MILLIS: u64 = 30; // Clock speed of CHIP-8 is usually 500Hz
+const FRAME_DURATION_MILLIS: u64 = 2; // Clock speed of CHIP-8 is usually 500Hz
 pub const KEYBOARD_SIZE: usize = 16;
 
 const FONT: [u8; 5 * 16] = [
@@ -61,6 +61,7 @@ pub struct Processor {
     pc: usize,
     sp: usize,
     keyboard_presses: [bool; KEYBOARD_SIZE],
+    is_waiting_for_input: bool,
 }
 
 impl Processor {
@@ -82,6 +83,7 @@ impl Processor {
             pc: 512, // Starts at address 0x200
             sp: 0,
             keyboard_presses: [false; KEYBOARD_SIZE],
+            is_waiting_for_input: false,
         }
     }
 
@@ -99,10 +101,20 @@ impl Processor {
         let mut game_canvas = GameCanvas::new();
         loop {
             if let Some(input) = game_canvas.read_keyboard_inputs() {
+                self.keyboard_presses = input;
             } else {
                 break;
             }
+
             self.tick();
+            if !self.is_waiting_for_input {
+                if self.delay_register > 0 {
+                    self.delay_register -= 1;
+                }
+                if self.sound_register > 0 {
+                    self.sound_register -= 1;
+                }
+            }
             game_canvas.draw_frame(&self.display);
             thread::sleep(time::Duration::from_millis(FRAME_DURATION_MILLIS));
         }
@@ -605,7 +617,7 @@ impl Processor {
     */
     fn op_fx07(&mut self, x: usize) {
         debug!("fx07");
-        // TODO
+        self.v[x] = self.delay_register;
         self.pc += INSTRUCTION_SIZE;
     }
 
@@ -617,8 +629,19 @@ impl Processor {
     */
     fn op_fx0a(&mut self, x: usize) {
         debug!("fx0a");
-        // TODO
-        self.pc += INSTRUCTION_SIZE;
+
+        // Check if an input was made
+        if self.is_waiting_for_input {
+            for (i, key) in self.keyboard_presses.iter().enumerate() {
+                if *key == true {
+                    self.is_waiting_for_input = false;
+                    self.v[x] = i as u8;
+                    self.pc += INSTRUCTION_SIZE;
+                }
+            }
+        } else {
+            self.is_waiting_for_input = true;
+        }
     }
 
     /*  Fx15 - LD DT, Vx

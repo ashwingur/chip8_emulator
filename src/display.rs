@@ -52,13 +52,43 @@ impl GameCanvas {
             return None;
         }
 
-        // for s in self.event_pump.keyboard_state().pressed_scancodes().collect() {
-        //     match s {
+        let mut keys = [false; KEYBOARD_SIZE];
 
-        //     }
-        // }
+        // The 4x4 keyboard will be mapped to the following keys
+        /*
+            1 2 3 C           1 2 3 4
+            4 5 6 D  --->     q w e r
+            7 8 9 E           a s d f
+            A 0 B F           z x c v
+        */
+        for s in self.event_pump.keyboard_state().pressed_scancodes() {
+            let code = match s {
+                Scancode::X => Some(0x0),
+                Scancode::Num1 => Some(0x1),
+                Scancode::Num2 => Some(0x2),
+                Scancode::Num3 => Some(0x3),
+                Scancode::Q => Some(0x4),
+                Scancode::W => Some(0x5),
+                Scancode::E => Some(0x6),
+                Scancode::A => Some(0x7),
+                Scancode::S => Some(0x8),
+                Scancode::D => Some(0x9),
+                Scancode::Z => Some(0xA),
+                Scancode::C => Some(0xB),
+                Scancode::Num4 => Some(0xC),
+                Scancode::R => Some(0xD),
+                Scancode::F => Some(0xE),
+                Scancode::V => Some(0xF),
+                Scancode::Escape => return None,
+                _ => None,
+            };
 
-        Some([false; KEYBOARD_SIZE])
+            if let Some(i) = code {
+                keys[i] = true;
+            }
+        }
+
+        Some(keys)
     }
 
     pub fn draw_frame(&mut self, display: &[[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT]) {
