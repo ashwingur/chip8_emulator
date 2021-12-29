@@ -5,3 +5,6 @@ Chip-8 Emulator in written Rust which uses the sdl2 library to render the screen
 Connect4
 
 ![Connect4 Gameplay on the Chip 8 Emulator](https://github.com/ashwingur/chip8_emulator/blob/master/CONNECT4_gameplay.gif?raw=true)
+
+Pong2
+![Pong2 Gameplay on the Chip 8 Emulator](https://github.com/ashwingur/chip8_emulator/blob/master/PONG2_gameplay.gif?raw=true)
